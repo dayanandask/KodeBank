@@ -39,6 +39,17 @@ const initDB = async () => {
             expairy DATETIME NOT NULL,
             FOREIGN KEY (uid) REFERENCES KodUser(uid) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS KodTransaction (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            uid INT NOT NULL,
+            type ENUM('Credit', 'Debit') NOT NULL,
+            amount DECIMAL(15, 2) NOT NULL,
+            description VARCHAR(255),
+            status ENUM('Completed', 'Pending', 'Flagged') DEFAULT 'Completed',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (uid) REFERENCES KodUser(uid) ON DELETE CASCADE
+        );
         `;
 
         console.log('🔧 Creating tables...');

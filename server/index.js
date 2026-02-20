@@ -24,6 +24,20 @@ app.use(cors({
 
 const JWT_SECRET = process.env.JWT_SECRET || 'kodbank_secret_key_2026';
 
+// Middleware to protect routes
+const authenticateToken = (req, res, next) => {
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ error: 'Unauthorized: No token provided' });
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (err) {
+        return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+    }
+};
+
 // --- Auth Routes ---
 
 // 1. Register
@@ -48,6 +62,20 @@ app.post('/api/auth/register', async (req, res) => {
         );
 
         await logSecurityEvent('USER_REGISTRATION', result.insertId, `Username: ${username}`);
+
+        // Seed initial transactions for 'Elite Circle' feel
+        const initialTransactions = [
+            ['Credit', 100000.00, 'Initial Vault Loading', result.insertId],
+            ['Debit', 500.00, 'Elite Membership Activation', result.insertId],
+            ['Credit', 1200.50, 'Dividends - Global Tech Fund', result.insertId]
+        ];
+
+        for (const tx of initialTransactions) {
+            await db.execute(
+                'INSERT INTO KodTransaction (type, amount, description, uid) VALUES (?, ?, ?, ?)',
+                tx
+            );
+        }
 
         res.status(201).json({ message: 'Registration successful', uid: result.insertId });
     } catch (error) {
@@ -122,28 +150,79 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // 3. Check Balance (Protected)
-app.get('/api/bank/balance', async (req, res) => {
+app.get('/api/bank/balance', authenticateToken, async (req, res) => {
     try {
-        const token = req.cookies.token;
+        const [users] = await db.execute('SELECT uid, balance FROM KodUser WHERE username = ?', [req.user.sub]);
+        if (users.length === 0) return res.status(404).json({ error: 'User not found' });
 
-        if (!token) {
-            return res.status(401).json({ error: 'Unauthorized: No token provided' });
-        }
+        const uid = users[0].uid;
 
-        // Verify JWT
-        const decoded = jwt.verify(token, JWT_SECRET);
+        // Log the security event
+        await logSecurityEvent('BALANCE_CHECK', uid, `Username: ${req.user.sub}`);
 
-        // Fetch balance from KodUser using username (subject) from token
-        const [users] = await db.execute('SELECT balance FROM KodUser WHERE username = ?', [decoded.sub]);
-
-        if (users.length === 0) {
-            return res.status(404).json({ error: 'User not found' });
-        }
+        // Record this in the transaction ledger for the UI
+        await db.execute(
+            'INSERT INTO KodTransaction (type, amount, description, uid, status) VALUES (?, ?, ?, ?, ?)',
+            ['Credit', 0.00, 'Security Verification: Vault Value Checked', uid, 'Completed']
+        );
 
         res.json({ balance: users[0].balance });
     } catch (error) {
         console.error(error);
-        res.status(401).json({ error: 'Unauthorized: Invalid or expired token' });
+        res.status(500).json({ error: 'Failed to fetch balance' });
+    }
+});
+
+// 4. Transactions (Protected)
+app.get('/api/bank/transactions', authenticateToken, async (req, res) => {
+    try {
+        const [users] = await db.execute('SELECT uid FROM KodUser WHERE username = ?', [req.user.sub]);
+        if (users.length === 0) return res.json([]); // Return empty if user not in DB (social mock)
+
+        const [transactions] = await db.execute(
+            'SELECT * FROM KodTransaction WHERE uid = ? ORDER BY created_at DESC LIMIT 10',
+            [users[0].uid]
+        );
+        res.json(transactions);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch transactions' });
+    }
+});
+
+// 5. User Profile (Protected)
+app.get('/api/auth/profile', authenticateToken, async (req, res) => {
+    try {
+        const [users] = await db.execute(
+            'SELECT username, email, phone, role, balance, (SELECT COUNT(*) FROM KodTransaction WHERE uid = u.uid) as tx_count FROM KodUser u WHERE username = ?',
+            [req.user.sub]
+        );
+        if (users.length === 0) {
+            return res.json({ username: req.user.sub, role: 'Guest', balance: 0 });
+        }
+        res.json(users[0]);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch profile' });
+    }
+});
+
+// 6. Change Password (Protected)
+app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const [users] = await db.execute('SELECT * FROM KodUser WHERE username = ?', [req.user.sub]);
+        const user = users[0];
+
+        const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+        if (!isPasswordValid) return res.status(401).json({ error: 'Invalid current password' });
+
+        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+        await db.execute('UPDATE KodUser SET password = ? WHERE uid = ?', [hashedNewPassword, user.uid]);
+
+        await logSecurityEvent('PASSWORD_CHANGE_SUCCESS', user.uid, `Username: ${user.username}`);
+        res.json({ message: 'Password updated successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'Password update failed' });
     }
 });
 
