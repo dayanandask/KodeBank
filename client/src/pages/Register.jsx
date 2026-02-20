@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Lock, Mail, Phone, ShieldCheck, Home, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { UserPlus, Lock, Mail, Phone, ShieldCheck, Home, ArrowRight, ArrowLeft, CheckCircle2, Chrome, Apple, Monitor } from 'lucide-react';
 
 const Register = () => {
     const [step, setStep] = useState(1);
@@ -31,7 +31,7 @@ const Register = () => {
     };
 
     return (
-        <div className="flex flex-col items-center justify-center min-vh-screen p-4 py-8">
+        <div className="flex flex-col items-center justify-center min-h-screen p-4 py-8">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
