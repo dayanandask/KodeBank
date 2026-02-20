@@ -60,11 +60,12 @@ const initDB = async () => {
         console.error('❌ Failed to initialize database:');
         console.error(error.message);
         if (error.code === 'ER_ACCESS_DENIED_ERROR') {
-            console.log('\n💡 HINT: Check your password in server/.env. You currently have "CLICK_TO:REVEAL_PASSWORD". Replace it with your actual Aiven password.');
+            console.log('\n💡 HINT: Check your password in Render Environment Variables.');
         }
+        process.exit(1); // Exit with error for Render
     } finally {
         if (connection) await connection.end();
-        process.exit();
+        process.exit(0); // Exit with success
     }
 };
 
