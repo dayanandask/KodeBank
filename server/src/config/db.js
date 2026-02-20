@@ -6,6 +6,17 @@ console.log(`[DB CONFIG]: Attempting connection to ${process.env.DB_HOST} as ${p
 const fs = require('fs');
 const path = require('path');
 
+const sslConfig = {
+    rejectUnauthorized: false // Safer for cloud environments like Render
+};
+
+// Only try to read the CA file if it exists to prevent crashing
+const caPath = path.join(__dirname, '../../ca.pem');
+if (fs.existsSync(caPath)) {
+    sslConfig.ca = fs.readFileSync(caPath);
+    sslConfig.rejectUnauthorized = true;
+}
+
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -15,10 +26,7 @@ const pool = mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    ssl: {
-        ca: fs.readFileSync(path.join(__dirname, '../../ca.pem')),
-        rejectUnauthorized: true
-    }
+    ssl: sslConfig
 });
 
 module.exports = pool.promise();

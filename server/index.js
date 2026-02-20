@@ -8,6 +8,16 @@ const db = require('./src/config/db');
 
 const app = express();
 
+// --- Production Resilience ---
+process.on('uncaughtException', (err) => {
+    console.error(`[CRITICAL ERROR]: ${err.message}`);
+    console.error(err.stack);
+});
+
+if (!process.env.DB_HOST || !process.env.DB_PASSWORD) {
+    console.error('[CONFIG ERROR]: Missing database environment variables. Service will not start.');
+}
+
 // --- Security Audit Logging ---
 const logSecurityEvent = async (event, uid, details) => {
     console.log(`[SECURITY EVENT]: ${event} | UID: ${uid || 'N/A'} | Time: ${new Date().toISOString()} | Info: ${details}`);
