@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -21,7 +21,7 @@ const Dashboard = ({ user }) => {
     const fetchTransactions = async () => {
         setLedgerLoading(true);
         try {
-            const res = await axios.get('http://localhost:5000/api/bank/transactions');
+            const res = await api.get('/api/bank/transactions');
             setTransactions(res.data);
         } catch (err) {
             console.error('Failed to fetch transactions');
@@ -38,7 +38,7 @@ const Dashboard = ({ user }) => {
         setLoading(true);
         setError('');
         try {
-            const res = await axios.get('http://localhost:5000/api/bank/balance');
+            const res = await api.get('/api/bank/balance');
             setBalance(res.data.balance);
 
             // Refresh ledger to show the new "Security Verification" entry
@@ -74,7 +74,7 @@ const Dashboard = ({ user }) => {
         e.preventDefault();
         setPwdStatus({ type: 'loading', msg: 'Updating vault credentials...' });
         try {
-            await axios.post('http://localhost:5000/api/auth/change-password', pwdData);
+            await api.post('/api/auth/change-password', pwdData);
             setPwdStatus({ type: 'success', msg: 'Security key rotated successfully!' });
             setPwdData({ currentPassword: '', newPassword: '' });
             setTimeout(() => setPwdStatus({ type: '', msg: '' }), 3000);
@@ -84,7 +84,7 @@ const Dashboard = ({ user }) => {
     };
 
     const handleLogout = async () => {
-        await axios.post('http://localhost:5000/api/auth/logout');
+        await api.post('/api/auth/logout');
         window.location.href = '/login';
     };
 

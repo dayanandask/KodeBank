@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
-import { motion } from 'framer-motion';
-import { UserPlus, Mail, Lock, Phone, ShieldCheck, Chrome, Apple, Monitor, Key, Building2, Home } from 'lucide-react';
+import api from '../services/api';
+import { motion, AnimatePresence } from 'framer-motion';
+import { User, Lock, Mail, Phone, ShieldCheck, Home, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 const Register = () => {
+    const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         username: '',
         email: '',
         password: '',
-        phone: ''
+        phone: '',
+        confirmPassword: ''
     });
     const [error, setError] = useState('');
     const navigate = useNavigate();
@@ -17,7 +19,7 @@ const Register = () => {
     const handleRegister = async (e) => {
         if (e) e.preventDefault();
         try {
-            await axios.post('http://localhost:5000/api/auth/register', formData);
+            await api.post('/api/auth/register', formData);
             navigate('/login');
         } catch (err) {
             setError(err.response?.data?.error || 'Registration failed');

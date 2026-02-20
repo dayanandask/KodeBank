@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import { motion } from 'framer-motion';
 import { User, Lock, Vault, Chrome, Apple, Monitor, Key, Building2, ShieldCheck, Home } from 'lucide-react';
-
-axios.defaults.withCredentials = true;
 
 const Login = ({ setUser }) => {
     const [formData, setFormData] = useState({
@@ -18,7 +16,7 @@ const Login = ({ setUser }) => {
     const handleLogin = async (e) => {
         if (e) e.preventDefault();
         try {
-            const res = await axios.post('http://localhost:5000/api/auth/login', formData);
+            const res = await api.post('/api/auth/login', formData);
             setUser({
                 username: res.data.username,
                 role: res.data.role
